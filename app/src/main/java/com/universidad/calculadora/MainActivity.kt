@@ -3,6 +3,7 @@ package com.universidad.calculadora
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -21,9 +22,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.universidad.calculadora.ui.theme.CalculadoraTheme
+import java.util.Locale
+
+data class CalculatorState(
+    val display: String = "0",
+    val currentInput: String = "",
+    val expression: MutableList<String> = mutableListOf(),
+    val history: List<String> = emptyList()
+)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -43,10 +53,15 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun CalculatorApp() {
-    var display by remember { mutableStateOf("0") }
-    var firstNumber by remember { mutableStateOf("") }
-    var secondNumber by remember { mutableStateOf("") }
-    var operation by remember { mutableStateOf("") }
+    var state by remember {
+        mutableStateOf(
+            CalculatorState(
+                display = "0",
+                currentInput = "",
+                expression = mutableListOf()
+            )
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -54,49 +69,58 @@ fun CalculatorApp() {
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Espaciador para posicionar los numeros hacia abajo
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.weight(0.5f))
 
-        // PP visualización
+        // Historial
         Text(
-            text = display,
+            text = state.history.joinToString("\n"),
+            style = MaterialTheme.typography.bodySmall,
+            color = Color.Gray
+        )
+
+        // Expresión actual
+        Text(
+            text = state.expression.joinToString(" ") + " " + state.currentInput,
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.DarkGray
+        )
+
+        // Display
+        Text(
+            text = state.display,
             style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.padding(16.dp)
         )
 
-        Spacer(modifier = Modifier.height(16.dp)) // Separación entre pantalla y botones
+        Spacer(modifier = Modifier.height(16.dp))
 
-        // Botones en columnas y filas
-        Column {
-            Row {
-                CalculatorButton("1") { handleInput("1", operation.isEmpty(), { firstNumber += it }, { secondNumber += it }, { display = it }) }
-                CalculatorButton("2") { handleInput("2", operation.isEmpty(), { firstNumber += it }, { secondNumber += it }, { display = it }) }
-                CalculatorButton("3") { handleInput("3", operation.isEmpty(), { firstNumber += it }, { secondNumber += it }, { display = it }) }
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                CalculatorButton("7") { handleNumber("7", state) { newState -> state = newState } }
+                CalculatorButton("8") { handleNumber("8", state) { newState -> state = newState } }
+                CalculatorButton("9") { handleNumber("9", state) { newState -> state = newState } }
+                CalculatorButton("/") { handleOperator("/", state) { newState -> state = newState } }
             }
-            Row {
-                CalculatorButton("4") { handleInput("4", operation.isEmpty(), { firstNumber += it }, { secondNumber += it }, { display = it }) }
-                CalculatorButton("5") { handleInput("5", operation.isEmpty(), { firstNumber += it }, { secondNumber += it }, { display = it }) }
-                CalculatorButton("6") { handleInput("6", operation.isEmpty(), { firstNumber += it }, { secondNumber += it }, { display = it }) }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                CalculatorButton("4") { handleNumber("4", state) { newState -> state = newState } }
+                CalculatorButton("5") { handleNumber("5", state) { newState -> state = newState } }
+                CalculatorButton("6") { handleNumber("6", state) { newState -> state = newState } }
+                CalculatorButton("*") { handleOperator("*", state) { newState -> state = newState } }
             }
-            Row {
-                CalculatorButton("7") { handleInput("7", operation.isEmpty(), { firstNumber += it }, { secondNumber += it }, { display = it }) }
-                CalculatorButton("8") { handleInput("8", operation.isEmpty(), { firstNumber += it }, { secondNumber += it }, { display = it }) }
-                CalculatorButton("9") { handleInput("9", operation.isEmpty(), { firstNumber += it }, { secondNumber += it }, { display = it }) }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                CalculatorButton("1") { handleNumber("1", state) { newState -> state = newState } }
+                CalculatorButton("2") { handleNumber("2", state) { newState -> state = newState } }
+                CalculatorButton("3") { handleNumber("3", state) { newState -> state = newState } }
+                CalculatorButton("-") { handleOperator("-", state) { newState -> state = newState } }
             }
-            Row {
-                CalculatorButton("0") { handleInput("0", operation.isEmpty(), { firstNumber += it }, { secondNumber += it }, { display = it }) }
-                CalculatorButton("+") { operation = "+" }
-                CalculatorButton("-") { operation = "-" }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                CalculatorButton("0") { handleNumber("0", state) { newState -> state = newState } }
+                CalculatorButton(".") { handleDecimal(state) { newState -> state = newState } }
+                CalculatorButton("+") { handleOperator("+", state) { newState -> state = newState } }
+                CalculatorButton("=") { calculateResult(state) { newState -> state = newState } }
             }
-            Row {
-                CalculatorButton("=") { display = calculateResult(firstNumber, secondNumber, operation) }
-                CalculatorButton("C") {
-                    resetCalculator(
-                        { display = it },
-                        { firstNumber = ""; secondNumber = ""; operation = "" }
-                    )
-                }
-                CalculatorButton("*") { operation = "*" }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                CalculatorButton("C") { clearCalculator { newState -> state = newState } }
             }
         }
     }
@@ -107,57 +131,110 @@ fun CalculatorButton(text: String, onClick: () -> Unit) {
     Button(
         onClick = onClick,
         modifier = Modifier
-            .padding(8.dp)
             .size(80.dp)
+            .padding(4.dp)
     ) {
         Text(text = text)
     }
 }
 
-fun handleInput(
-    input: String,
-    isFirstNumber: Boolean,
-    updateFirst: (String) -> Unit,
-    updateSecond: (String) -> Unit,
-    updateDisplay: (String) -> Unit
-) {
-    if (isFirstNumber) {
-        updateFirst(input)
-        updateDisplay(input)
-    } else {
-        updateSecond(input)
-        updateDisplay(input)
+// Funciones
+fun handleNumber(number: String, state: CalculatorState, updateState: (CalculatorState) -> Unit) {
+    if (state.currentInput.length >= 15) return
+
+    val newInput = if (state.currentInput == "0") number else state.currentInput + number
+    updateState(state.copy(
+        currentInput = newInput,
+        display = newInput
+    ))
+}
+
+fun handleDecimal(state: CalculatorState, updateState: (CalculatorState) -> Unit) {
+    if (!state.currentInput.contains(".")) {
+        val newInput = if (state.currentInput.isEmpty()) "0." else state.currentInput + "."
+        updateState(state.copy(
+            currentInput = newInput,
+            display = newInput
+        ))
     }
 }
 
-fun calculateResult(firstNumber: String, secondNumber: String, operation: String): String {
-    val num1 = firstNumber.toDoubleOrNull() ?: return "Error"
-    val num2 = secondNumber.toDoubleOrNull() ?: return "Error"
-    return when (operation) {
-        "+" -> (num1 + num2).toString()
-        "-" -> (num1 - num2).toString()
-        "*" -> (num1 * num2).toString()
-        else -> "Error"
+fun handleOperator(operator: String, state: CalculatorState, updateState: (CalculatorState) -> Unit) {
+    val newExpression = state.expression.toMutableList()
+
+    if (state.currentInput.isNotEmpty()) {
+        newExpression.add(state.currentInput)
+        newExpression.add(operator)
+        updateState(state.copy(
+            expression = newExpression,
+            currentInput = "",
+            display = operator
+        ))
+    } else if (newExpression.isNotEmpty() && newExpression.last() in listOf("+", "-", "*", "/")) {
+        newExpression[newExpression.lastIndex] = operator
+        updateState(state.copy(
+            expression = newExpression,
+            display = operator
+        ))
     }
 }
 
-fun resetCalculator(updateDisplay: (String) -> Unit, resetInputs: () -> Unit) {
-    updateDisplay("0")
-    resetInputs()
+fun calculateResult(state: CalculatorState, updateState: (CalculatorState) -> Unit) {
+    try {
+        val fullExpression = state.expression.toMutableList()
+        if (state.currentInput.isNotEmpty()) {
+            fullExpression.add(state.currentInput)
+        }
+
+        if (fullExpression.size < 3 || fullExpression.size % 2 == 0) {
+            updateState(state.copy(display = "Error"))
+            return
+        }
+
+        var result = fullExpression[0].toDouble()
+        for (i in 1 until fullExpression.size step 2) {
+            val operator = fullExpression[i]
+            val operand = fullExpression[i + 1].toDouble()
+
+            result = when (operator) {
+                "+" -> result + operand
+                "-" -> result - operand
+                "*" -> result * operand
+                "/" -> {
+                    if (operand == 0.0) throw ArithmeticException()
+                    result / operand
+                }
+                else -> throw IllegalArgumentException()
+            }
+        }
+
+        val resultString = if (result % 1 == 0.0)
+            result.toInt().toString()
+        else
+            String.format(Locale.US, "%.2f", result).trimEnd('0').trimEnd('.')
+
+        updateState(state.copy(
+            display = resultString,
+            currentInput = "",
+            expression = mutableListOf(resultString),
+            history = state.history + "${fullExpression.joinToString(" ")} = $resultString"
+        ))
+    } catch (e: Exception) {
+        updateState(state.copy(display = when (e) {
+            is ArithmeticException -> "Div/0"
+            else -> "Error"
+        }))
+    }
+}
+
+fun clearCalculator(updateState: (CalculatorState) -> Unit) {
+    updateState(CalculatorState())
 }
 
 @Preview(showBackground = true)
 @Composable
 fun CalculatorAppPreview() {
     CalculadoraTheme {
-        CalculatorApp()
-    }
-}
-
-@Preview
-@Composable
-fun PreviewCalculator() {
-    MaterialTheme {
         CalculatorApp()
     }
 }
