@@ -1,5 +1,8 @@
+// Calculadora con funcionamientos de calculo finalizada LVS
+
 package com.universidad.calculadora
 
+// Actualización de calculadora
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -94,6 +97,7 @@ fun CalculatorApp() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // modelado calculadora
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 CalculatorButton("7") { handleNumber("7", state) { newState -> state = newState } }
